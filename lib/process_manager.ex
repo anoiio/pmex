@@ -1,9 +1,10 @@
-defmodule ProcessManager do
+defmodule ProcessManager do 
 
     defmacro __using__(opts) do
         quote do 
             import ProcessManager
             use GenServer
+            require Logger
             
             defstruct [process_id: nil,
                        initial_step: unquote(opts[:initial_step]),
@@ -23,22 +24,24 @@ defmodule ProcessManager do
             end
 
             def handle_cast(event, state) do
-                state = case handle_event(event, state) do
-                    {:ok, new_state} -> new_state
-                    :error -> state
+                result = case handle_event(event, state) do
+                    {:ok, :ok, new_state} -> {:noreply, new_state}
+                    :error -> {:noreply, state}
+                    {:stop, reason, state} -> {:stop, reason, state}
+                    
                 end
-                {:noreply, state}
+                result
             end
 
             def handle_info(:query, state) do
-                IO.puts "#{inspect __MODULE__}: Requesting events"
+                Logger.debug "#{inspect __MODULE__}: Requesting events"
                 EventsStream.request_all_events_async(self())
                 schedule_query()
                 {:noreply, state}
             end
 
             def schedule_query do
-                Process.send_after(self(), :query, 5000) # In 1 sec
+                Process.send_after(self(), :query, 10000) # In 10 sec
             end
         end
     end
@@ -128,12 +131,13 @@ defmodule ProcessManager do
     def create_apply_step_transition_func() do
         quote do
 
-            def apply_step_transition([do: :finish], _state) do          
-                GenServer.stop(self())
+            def apply_step_transition([do: :finish], state) do
+                Logger.debug "#{inspect __MODULE__}: finished"         
+                {:stop, :normal, state}
             end
 
             def apply_step_transition([do: next_step], state) do          
-                    %__MODULE__{state | current_step: next_step}
+                {:ok, :ok, %__MODULE__{state | current_step: next_step}}
             end
         end
     end
@@ -180,24 +184,26 @@ defmodule ProcessManager do
     def create_handle_event_func do
         quote do
             def handle_event({event_type, %{} = payload}, state) do
-                state = case valid = validate_transition(state.current_step, event_type) do
+                {status, reason, state} = case valid = validate_transition(state.current_step, event_type) do
                     true  -> apply(__MODULE__, event_type, [payload])
                             |> apply_step_transition(state)
-                    false -> IO.puts "Invalid transition: state=#{inspect state.current_step}, event_type=#{inspect event_type}"
-                            state          
+                    false ->  Logger.debug "#{inspect __MODULE__}: Invalid transition: state=#{inspect state.current_step}, event_type=#{inspect event_type}"
+                            {:ok, :ok, state}          
                 end
-                {:ok, state}
+
+                {status, reason, state}
             end
 
             def handle_event(:start, state) do
+                Logger.info "#{inspect __MODULE__}: started"
                 schedule_query()
-                {:ok, %__MODULE__{state | current_step: state.initial_step}}
+                {:ok, :ok, %__MODULE__{state | current_step: state.initial_step}}
             end
 
             
 
             def handle_event(_, _) do
-                IO.puts "Unknown message"
+                 Logger.debug "#{inspect __MODULE__}: Unknown message"
                 :error
             end
         end

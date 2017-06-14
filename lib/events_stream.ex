@@ -1,5 +1,6 @@
 defmodule EventsStream do
 use GenServer
+require Logger
 
     def start_link do
         GenServer.start_link(__MODULE__, [], [{:name, __MODULE__}])
@@ -18,19 +19,19 @@ use GenServer
     end
 
     def handle_cast({:put, event}, queue) do
-        IO.puts "EventsStream: putting event=#{inspect event} into queue=#{inspect queue}"
+        Logger.debug "EventsStream: putting event=#{inspect event} into queue=#{inspect queue}"
         {:noreply, :queue.in(event, queue)}
     end
 
     def handle_cast({:get, subscriber}, queue) do
-        IO.puts "EventsStream: events requested"
+        Logger.debug "EventsStream: events requested"
         send_events(:queue.out(queue), subscriber)
         {:noreply, :queue.new}
     end
 
     def send_events({{:value, event}, queue}, to) do
         GenServer.cast(to, event)
-        IO.puts "EventsStream: event=#{inspect event} sent"
+        Logger.debug "EventsStream: event=#{inspect event} sent"
         send_events(:queue.out(queue), to)
     end
 
