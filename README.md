@@ -58,10 +58,20 @@ end
 
 ```Elixir
 defstep order_started do # step name
-  defevent product_selected(%{customer: customer_id, cid: cid}) do # event name and its paremeters
+  defevent product_selected(%{customer: customer_id, cid: cid}) do # event name and its payload paremeters
     request_payment(customer_id, cid) # command that should be sent when event received
     go await_payment # next step
   end 
+end
+```
+
+### init_process derective should follow steps definitions
+
+### command functions should be implemented in the module
+
+```Elixir
+def request_payment(customer_id, cid) do
+    IO.puts "Print: request_payment: customer_id=#{customer_id}, cid=#{cid}"
 end
 ```
 
