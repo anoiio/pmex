@@ -65,7 +65,7 @@ defstep order_started do # step name
 end
 ```
 
-### init_process derective should follow steps definitions
+### init_process directive should follow steps definitions
 
 ### command functions should be implemented in the module
 
