@@ -4,7 +4,7 @@ Application with a process manager writted in Elixir.
 
 pmex starting with EventsStream and OrderingProcess already running and subscribed.
 
-## Example of process definition
+### Example of process definition
 
 ```elixir
 defmodule OrderingProcess do
@@ -54,7 +54,18 @@ defmodule OrderingProcess do
 end
 ```
 
-In order to proceed with the process, submit following events to EventsStream:
+### Step definition
+
+```Elixir
+defstep order_started do # step name
+  defevent product_selected(%{customer: customer_id, cid: cid}) do # event name and its paremeters
+    request_payment(customer_id, cid) # command that should be sent when event received
+    go await_payment # next step
+  end 
+end
+```
+
+### In order to proceed with the ordering process, submit following events to EventsStream:
 
 1. EventsStream.put({:product_selected, %{customer: 123, cid: 778899}})
 2. EventsStream.put({:payment_done, %{customer: 123}})
