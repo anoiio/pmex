@@ -1,19 +1,61 @@
-# ProcessManager
+# pmex
 
-**TODO: Add description**
+Application with a process manager writted in Elixir.
 
-## Installation
+pmex starting with EventsStream and OrderingProcess already running and subscribed.
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `processManager` to your list of dependencies in `mix.exs`:
+## Example of process definition
 
 ```elixir
-def deps do
-  [{:processManager, "~> 0.1.0"}]
+defmodule OrderingProcess do
+    use ProcessManager, initial_step: :order_started
+ 
+    ######################################## Steps definitions ###################################
+
+    defstep order_started do
+        defevent product_selected(%{customer: customer_id, cid: cid}) do
+            request_payment(customer_id, cid)
+            go await_payment
+        end 
+    end
+
+    defstep await_payment do
+        defevent payment_done(%{customer: customer_id}) do
+            complete_order(customer_id)
+            go order_confirmation
+        end
+    end
+
+    defstep order_confirmation do
+        defevent order_closed(%{customer: customer_id, track_id: track}) do
+            send_email(customer_id, track)
+            finish
+        end 
+    end
+
+    ############################## Process initialization (Should follow definition) ##############
+
+    init_process
+
+    ############################## Commands implementations #######################################
+
+    def request_payment(customer_id, cid) do
+        IO.puts "Print: request_payment: customer_id=#{customer_id}, cid=#{cid}"
+    end
+
+    def complete_order(customer_id) do
+        IO.puts "Print: complete_order: customer_id=#{customer_id}"
+    end
+
+    def send_email(customer_id, track) do
+        IO.puts "Print: send_email: customer_id=#{customer_id} track=#{track}"
+    end
+
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at [https://hexdocs.pm/processManager](https://hexdocs.pm/processManager).
+In order to proceed with the process, submit following events to EventsStream:
 
+1. EventsStream.put({:product_selected, %{customer: 123, cid: 778899}})
+2. EventsStream.put({:payment_done, %{customer: 123}})
+3. EventsStream.put({:order_closed, %{customer: 123, track_id: "EX32746932878CH"}})
