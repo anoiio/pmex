@@ -67,7 +67,7 @@ end
 
 ```Elixir
 def request_payment(customer_id, cid) do
-    IO.puts "Print: request_payment: customer_id=#{customer_id}, cid=#{cid}"
+    IO.puts "Command exec: request_payment: customer_id=#{customer_id}, cid=#{cid}"
 end
 ```
 
