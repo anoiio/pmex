@@ -38,15 +38,15 @@ defmodule OrderingProcess do
     ############################## Commands implementations #######################################
 
     def request_payment(customer_id, cid) do
-        IO.puts "Print: request_payment: customer_id=#{customer_id}, cid=#{cid}"
+        IO.puts "Command exec: request_payment: customer_id=#{customer_id}, cid=#{cid}"
     end
 
     def complete_order(customer_id) do
-        IO.puts "Print: complete_order: customer_id=#{customer_id}"
+        IO.puts "Command exec: complete_order: customer_id=#{customer_id}"
     end
 
     def send_email(customer_id, track) do
-        IO.puts "Print: send_email: customer_id=#{customer_id} track=#{track}"
+        IO.puts "Command exec: send_email: customer_id=#{customer_id} track=#{track}"
     end
 
 end
