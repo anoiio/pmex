@@ -8,7 +8,9 @@ pmex starting with EventsStream and OrderingProcess already running and subscrib
 
 ```elixir
 defmodule OrderingProcess do
-    use ProcessManager, initial_step: :order_started
+    use ProcessManager
+
+    @initial_step :order_started
  
     ######################################## Steps definitions ###################################
 
@@ -32,10 +34,6 @@ defmodule OrderingProcess do
             finish
         end 
     end
-
-    ############################## Process initialization (Should follow definition) ##############
-
-    init_process
 
     ############################## Commands implementations #######################################
 
@@ -64,8 +62,6 @@ defstep order_started do # step name
   end 
 end
 ```
-
-### init_process directive should follow steps definitions
 
 ### command functions should be implemented in the module
 

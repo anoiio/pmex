@@ -1,5 +1,7 @@
 defmodule OrderingProcess do
-    use ProcessManager, initial_step: :order_started
+    use ProcessManager
+
+    @initial_step :order_started
  
     ######################################## Steps definitions ###################################
 
@@ -23,10 +25,6 @@ defmodule OrderingProcess do
             finish
         end 
     end
-
-    ############################## Process initialization (Should follow definition) ##############
-
-    init_process
 
     ############################## Commands implementations #######################################
 

@@ -1,14 +1,14 @@
 defmodule ProcessManager do 
 
-    defmacro __using__(opts) do
+    defmacro __using__(_opts) do
         quote do 
             import ProcessManager
             use GenServer
             require Logger
             
             defstruct [process_id: nil,
-                       initial_step: unquote(opts[:initial_step]),
-                       current_step: unquote(opts[:initial_step])]
+                       initial_step: unquote(@initial_step),
+                       current_step: nil]
 
             @timeouts Map.new
             @transitions Map.new
@@ -43,10 +43,12 @@ defmodule ProcessManager do
             def schedule_query do
                 Process.send_after(self(), :query, 10000) # In 10 sec
             end
+
+            @before_compile ProcessManager
         end
     end
 
-    defmacro init_process() do
+    defmacro __before_compile__(_env) do
         quote do
             unquote(create_transition_valiadation_func())
             unquote(create_get_timeout_func())
@@ -61,6 +63,7 @@ defmodule ProcessManager do
 
     defmacro defstep(step_def, event_def) do
         quote do
+
             {step_name, timeout} = case unquote(Macro.escape(step_def, unquote: true)) do
                 {name, _, [{:wait, _, [seconds]}]} -> {name, seconds}
                 {name, _, _} -> {name, :no}
