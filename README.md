@@ -9,25 +9,6 @@ pmex starting with EventsStream and OrderingProcess already running and subscrib
 
 ```elixir
 defmodule OrderingProcess do
-    use ProcessManager
-
-    @initial_step :order_started
- 
-    ######################################## Steps definitions ###################################
-
-    defstep order_started do
-        defevent product_selected(%{customer: customer_id, cid: cid}) do
-            request_payment(customer_id, cid)
-            go await_payment
-        end 
-    end
-
-    defstep await_payment do
-        defevent payment_done(%{customer: customer_id}) do
-            complete_order(customer_id)
-            go order_confirmation
-        end
-    enddefmodule OrderingProcess do
     use ProcessManager, initial_step: :start
 
     ######################################## Steps definitions ###################################
