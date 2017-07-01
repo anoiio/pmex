@@ -112,7 +112,7 @@ end
 ```
 
 1. Step can have several events.
-2. Each event can define deferen next step.
+2. Each event can define different next step.
 3. Next step can be same or other step.
 
 ### Command functions should be implemented in the module
@@ -126,21 +126,21 @@ end
 ### In order to proceed with the ordering process, submit following events to EventsStream:
 
 #### Case 1
-EventsStream.put({:order_started, %{customer: 123, order: 778899}})
-EventsStream.put({:product_selected, %{order: 778899, product: 67890000}})
-EventsStream.put({:product_removed, %{order: 778899, product: 67890000}})
-EventsStream.put({:product_selected, %{order: 778899, product: 67890001}})
-EventsStream.put({:product_selected, %{order: 778899, product: 67890002}})
-EventsStream.put({:selection_completed, %{order: 778899}})
-EventsStream.put({:payment_done, %{order: 778899}})
-EventsStream.put({:order_closed, %{customer: 123, track_id: "EX32746932878CH"}})
+EventsStream.put({:order_started, %{customer: 123, order: 778899}}) <br />
+EventsStream.put({:product_selected, %{order: 778899, product: 67890000}}) <br />
+EventsStream.put({:product_removed, %{order: 778899, product: 67890000}}) <br />
+EventsStream.put({:product_selected, %{order: 778899, product: 67890001}}) <br />
+EventsStream.put({:product_selected, %{order: 778899, product: 67890002}}) <br />
+EventsStream.put({:selection_completed, %{order: 778899}}) <br />
+EventsStream.put({:payment_done, %{order: 778899}}) <br />
+EventsStream.put({:order_closed, %{customer: 123, track_id: "EX32746932878CH"}}) <br />
 
 #### Case 2
-EventsStream.put({:order_started, %{customer: 123, order: 778899}})
-EventsStream.put({:product_selected, %{order: 778899, product: 67890000}})
-EventsStream.put({:product_removed, %{order: 778899, product: 67890000}})
-EventsStream.put({:product_selected, %{order: 778899, product: 67890001}})
-EventsStream.put({:product_selected, %{order: 778899, product: 67890002}})
-EventsStream.put({:selection_completed, %{order: 778899}})
-EventsStream.put({:payment_failed, %{order: 778899}})
-EventsStream.put({:order_canceled, %{customer: 123, order: 778899}})
+EventsStream.put({:order_started, %{customer: 123, order: 778899}}) <br />
+EventsStream.put({:product_selected, %{order: 778899, product: 67890000}}) <br />
+EventsStream.put({:product_removed, %{order: 778899, product: 67890000}}) <br />
+EventsStream.put({:product_selected, %{order: 778899, product: 67890001}}) <br />
+EventsStream.put({:product_selected, %{order: 778899, product: 67890002}}) <br />
+EventsStream.put({:selection_completed, %{order: 778899}})<br />
+EventsStream.put({:payment_failed, %{order: 778899}}) <br />
+EventsStream.put({:order_canceled, %{customer: 123, order: 778899}}) <br />
