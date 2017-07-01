@@ -1,17 +1,17 @@
 defmodule ProcessManager do 
 
-    defmacro __using__(_opts) do
+    defmacro __using__(opts) do
         quote do 
             import ProcessManager
             use GenServer
             require Logger
             
             defstruct [process_id: nil,
-                       initial_step: unquote(@initial_step),
+                       initial_step: unquote(opts[:initial_step]),
                        current_step: nil]
 
-            @timeouts Map.new
             @transitions Map.new
+            @expanding_step_name nil
 
             def start_link(options) do
                  {:ok, pid} = GenServer.start_link(__MODULE__, options, [{:name, __MODULE__}])
@@ -51,7 +51,6 @@ defmodule ProcessManager do
     defmacro __before_compile__(_env) do
         quote do
             unquote(create_transition_valiadation_func())
-            unquote(create_get_timeout_func())
             unquote(create_handle_event_func())
             unquote(create_apply_step_transition_func())
         end
@@ -61,37 +60,37 @@ defmodule ProcessManager do
         step
     end
 
-    defmacro defstep(step_def, event_def) do
+    defmacro defstep(step_def, do: events_def) do
         quote do
-
             {step_name, timeout} = case unquote(Macro.escape(step_def, unquote: true)) do
                 {name, _, [{:wait, _, [seconds]}]} -> {name, seconds}
                 {name, _, _} -> {name, :no}
             end 
 
-            [do: {event_name, event_definition, next_step, event_body}] = unquote(event_def)
+            @expanding_step_name step_name
 
-            IO.puts "STEP: #{inspect step_name} EVENT: #{inspect event_name} NEXT_STEP: #{inspect next_step}"
-
-            unquote(create_step_func())
-            unquote(create_event_func())
-            unquote(create_transition())
-            unquote(create_timeout())
+            unquote(events_def)
 
             IO.puts "@transitions: #{inspect @transitions}"
-            IO.puts "@timeouts: #{inspect @timeouts}"
          end
+    end
+
+    defmacro defevent(event_def, event) do
+        quote do
+            {event_name, _, _} = unquote(Macro.escape(event_def, unquote: true))
+            event_definition = unquote(Macro.escape(event_def, unquote: true))
+            event_body = unquote(Macro.escape(event, unquote: true))
+            next_step = unquote(find_next_step(Macro.escape(event, unquote: true)))
+
+            unquote(create_event_func())
+            unquote(create_transition())
+            unquote(create_step_func())
+        end
     end
 
     def create_transition() do
         quote bind_quoted: [] do
-            @transitions Map.put_new(@transitions, event_name, {step_name, next_step})
-        end
-    end
-
-    def create_timeout() do
-        quote bind_quoted: [] do
-            @timeouts Map.put_new(@timeouts, event_name, timeout)
+            @transitions Map.put_new(@transitions, event_name, {@expanding_step_name, next_step})
         end
     end
 
@@ -106,7 +105,6 @@ defmodule ProcessManager do
     def create_event_func() do
         quote bind_quoted: [] do
             def unquote(event_definition) do
-                unquote(next_step)
                 unquote(event_body)
             end
         end
@@ -133,7 +131,6 @@ defmodule ProcessManager do
 
     def create_apply_step_transition_func() do
         quote do
-
             def apply_step_transition([do: :finish], state) do
                 Logger.debug "#{inspect __MODULE__}: finished"         
                 {:stop, :normal, state}
@@ -145,32 +142,7 @@ defmodule ProcessManager do
         end
     end
 
-    
-    def create_get_timeout_func() do
-        quote do
-            def get_timeout(step) do
-                result = with timeout <- @timeouts[step] do
-                    timeout
-                end
-
-                result = case result do
-                    nil     -> :no
-                    not_nil -> result
-                end
-            end
-        end
-    end
-
-    defmacro defevent(event_definition, event_body) do
-        quote do
-            {event_name, _, _} = unquote(Macro.escape(event_definition, unquote: true))
-            next_step = unquote(find_next_step(Macro.escape(event_body, unquote: true)))
-
-            {event_name, unquote(Macro.escape(event_definition, unquote: true)), next_step, unquote(Macro.escape(event_body, unquote: true))}
-        end
-    end
-
-     def find_next_step(event_body) do
+    def find_next_step(event_body) do
         quote do
             next_step = case unquote(event_body) do
                 [do: {:go, _, [{step, _, _}]}] -> step
@@ -178,11 +150,9 @@ defmodule ProcessManager do
                                                     {:go, _, [{step, _, _}]} -> step
                                                     {:finish, _, _} -> :finish
                                                 end
-                
             end
         end
     end
-
 
     def create_handle_event_func do
         quote do
@@ -198,12 +168,10 @@ defmodule ProcessManager do
             end
 
             def handle_event(:start, state) do
-                Logger.info "#{inspect __MODULE__}: started"
+                Logger.info "#{inspect __MODULE__}: started with #{inspect state.initial_step}"
                 schedule_query()
                 {:ok, :ok, %__MODULE__{state | current_step: state.initial_step}}
             end
-
-            
 
             def handle_event(_, _) do
                  Logger.debug "#{inspect __MODULE__}: Unknown message"

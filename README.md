@@ -1,6 +1,7 @@
 # pmex
 
-Application with a process manager writted in Elixir.
+Purpose of this application is a case stady of implementing DSL for process manager in Elixir. 
+EventsStream, subscription to EventsStream and pulling mechanisms implemented solelly as a mockup in order to drive process manager.
 
 pmex starting with EventsStream and OrderingProcess already running and subscribed.
 
@@ -26,6 +27,45 @@ defmodule OrderingProcess do
             complete_order(customer_id)
             go order_confirmation
         end
+    enddefmodule OrderingProcess do
+    use ProcessManager, initial_step: :start
+
+    ######################################## Steps definitions ###################################
+
+    defstep start do
+        defevent order_started(%{customer: customer_id, order: order_id}) do
+            open_shopping_cart(customer_id, order_id)
+            go product_selection
+        end
+    end
+
+    defstep product_selection do
+        defevent product_selected(%{order: order_id, product: product_id}) do
+            add_to_cart(order_id, product_id)
+            go product_selection
+        end
+
+        defevent product_removed(%{order: order_id, product: product_id}) do
+            remove_from_cart(order_id, product_id)
+            go product_selection
+        end
+
+        defevent selection_completed(%{order: order_id}) do
+            request_payment(order_id)
+            go await_payment
+        end 
+    end
+
+    defstep await_payment do
+        defevent payment_done(%{order: order_id}) do
+            complete_order(order_id)
+            go order_confirmation
+        end
+
+        defevent payment_failed(%{order: order_id}) do
+            cancel_order(order_id)
+            go cancel_confirmation
+        end
     end
 
     defstep order_confirmation do
@@ -35,18 +75,45 @@ defmodule OrderingProcess do
         end 
     end
 
-    ############################## Commands implementations #######################################
-
-    def request_payment(customer_id, cid) do
-        IO.puts "Command exec: request_payment: customer_id=#{customer_id}, cid=#{cid}"
+    defstep cancel_confirmation do
+        defevent order_canceled(%{customer: customer_id, order: order_id}) do
+            send_cancelation_email(customer_id, order_id)
+            finish
+        end 
     end
 
-    def complete_order(customer_id) do
-        IO.puts "Command exec: complete_order: customer_id=#{customer_id}"
+    ############################## Commands implementations #######################################
+
+    def open_shopping_cart(customer_id, order_id) do
+        Logger.info "Command exec: open_shopping_cart: customer_id=#{customer_id}, order_id=#{order_id}"
+    end
+
+    def add_to_cart(order_id, product_id) do
+        Logger.info "Command exec: add_to_cart: order_id=#{order_id}, product_id=#{product_id}"
+    end
+
+    def remove_from_cart(order_id, product_id) do
+        Logger.info "Command exec: remove_from_cart: order_id=#{order_id}, product_id=#{product_id}"
+    end
+
+    def request_payment(order_id) do
+        Logger.info "Command exec: request_payment: order_id=#{order_id}"
+    end
+
+    def complete_order(order_id) do
+        Logger.info "Command exec: complete_order: order_id=#{order_id}"
+    end
+
+    def cancel_order(order_id) do
+        Logger.info "Command exec: cancel_order: order_id=#{order_id}"
     end
 
     def send_email(customer_id, track) do
-        IO.puts "Command exec: send_email: customer_id=#{customer_id} track=#{track}"
+        Logger.info "Command exec: send_email: customer_id=#{customer_id} track=#{track}"
+    end
+
+    def send_cancelation_email(customer_id, order_id) do
+        Logger.info "Command exec: send_cancelation_email: customer_id=#{customer_id} order_id=#{order_id}"
     end
 
 end
@@ -55,24 +122,44 @@ end
 ### Step definition
 
 ```Elixir
-defstep order_started do # step name
-  defevent product_selected(%{customer: customer_id, cid: cid}) do # event name and its payload paremeters
-    request_payment(customer_id, cid) # command that should be sent when event received
-    go await_payment # next step
-  end 
+defstep start do #step name
+        defevent order_started(%{customer: customer_id, order: order_id}) do #event name and its payload paremeters
+            open_shopping_cart(customer_id, order_id) #command that should be sent when event received
+            go product_selection #next step
+        end
 end
 ```
 
-### command functions should be implemented in the module
+1. Step can have several events.
+2. Each event can define deferen next step.
+3. Next step can be same or other step.
+
+### Command functions should be implemented in the module
 
 ```Elixir
-def request_payment(customer_id, cid) do
-    IO.puts "Command exec: request_payment: customer_id=#{customer_id}, cid=#{cid}"
+def open_shopping_cart(customer_id, order_id) do
+        Logger.info "Command exec: open_shopping_cart: customer_id=#{customer_id}, order_id=#{order_id}"
 end
 ```
 
 ### In order to proceed with the ordering process, submit following events to EventsStream:
 
-1. EventsStream.put({:product_selected, %{customer: 123, cid: 778899}})
-2. EventsStream.put({:payment_done, %{customer: 123}})
-3. EventsStream.put({:order_closed, %{customer: 123, track_id: "EX32746932878CH"}})
+#### Case 1
+EventsStream.put({:order_started, %{customer: 123, order: 778899}})
+EventsStream.put({:product_selected, %{order: 778899, product: 67890000}})
+EventsStream.put({:product_removed, %{order: 778899, product: 67890000}})
+EventsStream.put({:product_selected, %{order: 778899, product: 67890001}})
+EventsStream.put({:product_selected, %{order: 778899, product: 67890002}})
+EventsStream.put({:selection_completed, %{order: 778899}})
+EventsStream.put({:payment_done, %{order: 778899}})
+EventsStream.put({:order_closed, %{customer: 123, track_id: "EX32746932878CH"}})
+
+#### Case 2
+EventsStream.put({:order_started, %{customer: 123, order: 778899}})
+EventsStream.put({:product_selected, %{order: 778899, product: 67890000}})
+EventsStream.put({:product_removed, %{order: 778899, product: 67890000}})
+EventsStream.put({:product_selected, %{order: 778899, product: 67890001}})
+EventsStream.put({:product_selected, %{order: 778899, product: 67890002}})
+EventsStream.put({:selection_completed, %{order: 778899}})
+EventsStream.put({:payment_failed, %{order: 778899}})
+EventsStream.put({:order_canceled, %{customer: 123, order: 778899}})
