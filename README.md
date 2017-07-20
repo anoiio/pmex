@@ -1,4 +1,4 @@
-# pmex
+# pmex A
 
 Purpose of this application is a case stady of implementing DSL for process manager in Elixir. <br />
 EventsStream, subscription to EventsStream and pulling mechanisms implemented solelly as a mockup in order to drive process manager.
