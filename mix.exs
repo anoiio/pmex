@@ -20,7 +20,7 @@ defmodule ProcessManager.Mixfile do
       extra_applications: [:logger]]
   end
 
-  # Dependencies can be Hex packages:
+  # Dependencies can be Hex packages: A
   #
   #   {:my_dep, "~> 0.3.0"}
   #
